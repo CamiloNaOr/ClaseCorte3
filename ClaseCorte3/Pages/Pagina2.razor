@@ -1,0 +1,91 @@
+﻿@page "/pagina2"
+
+@inject HttpClient _client;
+
+@using System.Net.Http.Json
+@using ClaseCorte3.Data
+
+<MudButton OnClick="(args) => AgregarNuevoRegistro()" Variant="Variant.Filled" Color="Color.Primary">Añadir</MudButton>
+
+<MudDataGrid T="Producto" Items="@Productos" ReadOnly="@_readOnly" EditMode="@(_isCellEditMode ? DataGridEditMode.Cell : DataGridEditMode.Form)"
+    StartedEditingItem="@StartedEditingItem" CancelledEditingItem="@CancelledEditingItem" CommittedItemChanges="@CommittedItemChanges"
+    Bordered="true" Dense="true" EditTrigger="@(_editTriggerRowClick ? DataGridEditTrigger.OnRowClick : DataGridEditTrigger.Manual)">
+    <Columns>
+        <Column T="Producto" Field="id" Title="Id" IsEditable="false" />
+        <Column T="Producto" Field="nombre" />
+        <Column T="Producto" Field="cantidad" />
+        <Column T="Producto" Field="precio"/>
+        <Column T="Producto" Field="descripcion" Title="Descripcion" />
+        <Column T="Producto" Hidden="@(_isCellEditMode || _readOnly || _editTriggerRowClick)" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Edit" OnClick="@context.Actions.StartEditingItem" />
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Outlined.Delete" OnClick="(args)=> EliminarLibroo(context.Item)" />
+            </CellTemplate>
+        </Column>
+    </Columns>
+</MudDataGrid>
+
+
+@code {
+
+    private IEnumerable<Producto> Productos = new List<Producto>();
+    private bool _readOnly;
+    private bool _isCellEditMode;
+    private List<string> _events = new();
+    private bool _editTriggerRowClick;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var elemento = new List<Producto>();
+        _client.BaseAddress = new Uri(" https://localhost:7174/");
+
+        var requestMessage = new HttpRequestMessage(HttpMethod.Get, "Biblioteca/ConsultaProductos");
+        var respuesta = await _client.SendAsync(requestMessage);
+
+        if(respuesta.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            var responseBody = await respuesta.Content.ReadAsStringAsync();
+            var listasProducto = System.Text.Json.JsonSerializer.Deserialize<List<Producto>>(responseBody);
+            Productos = listasProducto;
+        }
+
+        
+    }
+
+    void EliminarLibroo(Producto item)
+    {
+        
+    }
+
+    void AgregarNuevoRegistro()
+    {
+        var elemento = new Producto
+            {
+                nombre = "este no es",
+                cantidad = 3,
+                descripcion = "edewfw",
+                precio = 10,
+            };
+            ((List<Producto>)Productos).Add(elemento);
+            StateHasChanged();
+    }
+
+    // events
+    void StartedEditingItem(Producto item)
+    {
+        _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    void CancelledEditingItem(Producto item)
+    {
+        _events.Insert(0, $"Event = CancelledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    //este servira para guardar o actualizar registros
+    void CommittedItemChanges(Producto item)
+    {
+        _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    
+}
